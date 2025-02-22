@@ -1,7 +1,9 @@
 module SimpleXChat
-  require 'websocket'
-  require 'logger'
   require 'net/http'
+  require 'logger'
+  require 'json'
+  require 'websocket'
+  require 'concurrent'
 
   # Fixes regex match for status line in HTTPResponse
   class HTTPResponse < Net::HTTPResponse
@@ -18,17 +20,18 @@ module SimpleXChat
   class ClientAgent
     attr_accessor :on_message
 
-    def initialize client_uri, connect: false, log_level: Logger::INFO
+    def initialize client_uri, connect: true, log_level: Logger::INFO
       @uri = client_uri
       @message_queue = SizedQueue.new 4096
       @socket = nil
       @listener_thread = nil
       @handshake = nil
-      @corr_id = 1 # Correlation ID for mapping client responses to command waiters
+      @corr_id = Concurrent::AtomicFixnum.new(1) # Correlation ID for mapping client responses to command waiters
       @logger = Logger.new($stderr)
+      @logger.level = log_level
       @logger.progname = 'simplex-chat'
       @logger.formatter = -> (severity, datetime, progname, msg) {
-        "[#{severity}] | #{datetime} | (#{progname}) :: #{msg}\n"
+        "| [#{severity}] | #{datetime} | (#{progname}) :: #{msg}\n"
       }
 
       if connect
@@ -40,19 +43,46 @@ module SimpleXChat
 
     def connect
       @logger.debug("Connecting to: '#{@uri}'...")
-      @socket = Net::BufferedIO.new(TCPSocket.new @uri.host, @uri.port)
+      @socket = TCPSocket.new @uri.host, @uri.port
       @handshake = WebSocket::Handshake::Client.new(url: @uri.to_s)
 
       # Do websocket handshake
       @logger.debug("Doing handshake with: '#{@uri}'...")
       @socket.write @handshake.to_s
-      resp = HTTPResponse.read_new @socket
+      resp = HTTPResponse.read_new(Net::BufferedIO.new(@socket))
 
       @listener_thread = Thread.new do
-        
+        frame = WebSocket::Frame::Incoming::Client.new(version: @handshake.version)
+        loop do
+          begin
+            buf = @socket.read_nonblock 4096
+            frame << buf
+            msg = frame.next
+            next if msg == nil
+            # @logger.debug("Raw message: #{msg}")
+
+            obj = JSON.parse msg.to_s
+            @logger.debug("New message: #{obj}")
+
+            @message_queue.push obj
+          rescue IO::WaitReadable
+            IO.select([@socket])
+            retry
+          rescue IO::WaitWritable
+            IO.select(nil, [@socket])
+            retry
+          rescue => e
+            puts "Unhandled exception caught: #{e}"
+            raise e
+          end
+        end
       end
 
       @logger.info("Successfully connected ClientAgent to: #{@uri}")
+    end
+
+    def next_message
+      @message_queue.pop
     end
 
     def disconnect
@@ -63,6 +93,12 @@ module SimpleXChat
 
     def connected?
       @socket != nil
+    end
+
+    private
+
+    def next_corr_id
+      @corr_id.update { |x| x + 1 } - 1
     end
   end
 end
