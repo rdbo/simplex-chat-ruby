@@ -32,5 +32,9 @@ puts "==================================="
 puts "Listening for messages..."
 loop do
   msg = client.next_message
+  if msg == nil
+    puts "Message queue is closed"
+    break
+  end
   puts "Received message"
 end

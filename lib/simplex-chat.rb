@@ -91,7 +91,10 @@ module SimpleXChat
             IO.select(nil, [@socket])
             retry
           rescue => e
+            # TODO: Verify if this way of stopping the execution
+            #       is graceful enough after implementing reconnects
             puts "Unhandled exception caught: #{e}"
+            @message_queue.close
             raise e
           end
         end
