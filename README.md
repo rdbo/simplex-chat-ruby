@@ -5,3 +5,7 @@ A port for the SimpleX Chat client API for Ruby
 This project is licensed under the GNU AGPL-3.0 (no later versions).
 
 Read `LICENSE` for more information.
+
+## Showcase
+
+![showcase](showcase.png)
