@@ -69,13 +69,14 @@ module SimpleXChat
             @logger.debug("New message: #{msg}")
 
             corr_id = msg["corrId"]
+            resp = msg["resp"]
             single_use_queue = @command_waiters[corr_id]
             if corr_id != nil && single_use_queue != nil
               single_use_queue = @command_waiters[corr_id]
-              single_use_queue.push(msg)
+              single_use_queue.push(resp)
               @logger.debug("Message sent to waiter with corrId '#{corr_id}'")
             else
-              @message_queue.push msg
+              @message_queue.push resp
             end
           rescue IO::WaitReadable
             IO.select([@socket])
@@ -123,11 +124,11 @@ module SimpleXChat
 
       @socket.write frame.to_s
 
-      # TODO: Verify why it's taking too long
       msg = nil
       50.times do
         begin
           msg = single_use_queue.pop(true)
+          break
         rescue ThreadError
           sleep 0.1
         end

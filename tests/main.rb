@@ -10,10 +10,12 @@ version = client.send_command '/version'
 puts "==================================="
 puts
 puts
-puts "SimpleX Chat version: #{version["resp"]["versionInfo"]["version"]}"
+puts "SimpleX Chat version: #{version["versionInfo"]["version"]}"
 puts
 puts
 puts "==================================="
+
+puts "Listening for messages..."
 loop do
   msg = client.next_message
   puts "RECEIVED MESSAGE: #{msg}"
