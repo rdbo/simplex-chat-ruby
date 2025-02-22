@@ -1,3 +1,7 @@
+# frozen_string_literal: true
+
+require_relative 'simplex-chat/version'
+
 module SimpleXChat
   require 'net/http'
   require 'logger'

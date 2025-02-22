@@ -1,7 +1,15 @@
+PATH
+  remote: .
+  specs:
+    simplex-chat (0.1.0)
+      concurrent-ruby (~> 1.3)
+      websocket (~> 1.2)
+
 GEM
   remote: https://rubygems.org/
   specs:
     concurrent-ruby (1.3.5)
+    rake (13.2.1)
     websocket (1.2.11)
 
 PLATFORMS
@@ -9,8 +17,8 @@ PLATFORMS
   x86_64-linux-musl
 
 DEPENDENCIES
-  concurrent-ruby (~> 1.3)
-  websocket (~> 1.2)
+  rake (~> 13.0)
+  simplex-chat!
 
 BUNDLED WITH
    2.6.2

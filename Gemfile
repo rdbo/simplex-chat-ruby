@@ -2,6 +2,7 @@
 
 source "https://rubygems.org"
 
-gem "websocket", "~> 1.2"
+# Specify your gem's dependencies in simplex-chat.gemspec
+gemspec
 
-gem "concurrent-ruby", "~> 1.3"
+gem "rake", "~> 13.0"
