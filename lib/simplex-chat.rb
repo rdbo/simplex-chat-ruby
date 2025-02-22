@@ -17,6 +17,12 @@ module SimpleXChat
     end
   end
 
+  module ChatType
+    DIRECT = '@'
+    GROUP = '#'
+    CONTACT_REQUEST = '<@'
+  end
+
   class ClientAgent
     attr_accessor :on_message
 
@@ -134,7 +140,19 @@ module SimpleXChat
         end
       end
 
+      if msg == nil
+        raise "Failed to send command"
+      end
+
       msg
+    end
+
+    def api_send_text_message(chat_type, contact, message)
+      resp = send_command "#{chat_type}#{contact} #{message}"
+      resp_type = resp["type"]
+      raise "Unexpected response: #{resp_type}" if resp_type != "newChatItems"
+
+      resp["chatItems"]
     end
 
     private

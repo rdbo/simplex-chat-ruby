@@ -15,6 +15,11 @@ puts
 puts
 puts "==================================="
 
+resp = client.api_send_text_message SimpleXChat::ChatType::DIRECT, "dummerino_1", "HELLO"
+puts "------------------------------------"
+puts "Send text message response: #{resp}"
+puts "------------------------------------"
+
 puts "Listening for messages..."
 loop do
   msg = client.next_message
