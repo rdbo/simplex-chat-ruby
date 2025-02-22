@@ -69,10 +69,10 @@ module SimpleXChat
             frame << buf
             obj = frame.next
             next if obj == nil
-            # @logger.debug("Raw message: #{msg}")
+            @logger.debug("New message (raw): #{obj}")
 
             msg = JSON.parse obj.to_s
-            @logger.debug("New message: #{msg}")
+            # @logger.debug("New message: #{msg}")
 
             corr_id = msg["corrId"]
             resp = msg["resp"]
@@ -131,7 +131,7 @@ module SimpleXChat
       @socket.write frame.to_s
 
       msg = nil
-      50.times do
+      100.times do
         begin
           msg = single_use_queue.pop(true)
           break
@@ -145,6 +145,47 @@ module SimpleXChat
       end
 
       msg
+    end
+
+    def api_version
+      resp = send_command '/version'
+      resp_type = resp["type"]
+      raise "Unexpected response: #{resp_type}" if resp_type != "versionInfo"
+
+      resp["versionInfo"]["version"]
+    end
+
+    def api_profile
+      resp = send_command '/profile'
+      resp_type = resp["type"]
+      raise "Unexpected response: #{resp_type}" if resp_type != "userProfile"
+
+      {
+        "name" => resp["user"]["profile"]["displayName"],
+        "preferences" => resp["user"]["fullPreferences"].map{|k, v| { k => v["allow"] == "yes"}}.reduce({}, :merge)
+      }
+    end
+
+    def api_get_user_address
+      resp = send_command "/show_address"
+      resp_type = resp["type"]
+
+      # Check if user doesn't have an address      
+      if resp_type == "chatCmdError" && resp.dig("chatError", "storeError", "type") == "userContactLinkNotFound"
+        return nil
+      end
+  
+      raise "Unexpected response: #{resp_type}" if resp_type != "userContactLink"
+
+      resp["contactLink"]["connReqContact"]
+    end
+
+    def api_create_user_address
+      resp = send_command '/address'
+      resp_type = resp["type"]
+      raise "Unexpected response: #{resp_type}" if resp_type != "userContactLinkCreated"
+
+      resp["connReqContact"]
     end
 
     def api_send_text_message(chat_type, contact, message)
