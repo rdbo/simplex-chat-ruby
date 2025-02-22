@@ -196,6 +196,47 @@ module SimpleXChat
       resp["chatItems"]
     end
 
+    def api_contacts
+      resp = send_command "/contacts"
+      resp_type = resp["type"]
+      raise "Unexpected response: #{resp_type}" if resp_type != "contactsList"
+
+      contacts = resp["contacts"]
+      contacts.map{ |c| {
+        "id" => c["contactId"],
+        "name" => c["localDisplayName"],
+        "preferences" => c["profile"]["preferences"].map{|k, v| { k => v["allow"] == "yes"}}.reduce({}, :merge),
+        "mergedPreferences" => c["mergedPreferences"].map{|k, v| {
+          k => (v["enabled"]["forUser"] && v["enabled"]["forContact"])
+        }}.reduce({}, :merge),
+      }}
+    end
+
+    def api_groups
+      resp = send_command "/groups"
+      resp_type = resp["type"]
+      raise "Unexpected response: #{resp_type}" if resp_type != "groupsList"
+
+      groups = resp["groups"]
+      groups.map{ |entry| 
+        group = entry[0]
+        members = entry[1]
+
+        {
+          "id" => group["groupId"],
+          "name" => group["localDisplayName"],
+          "preferences" => group["fullGroupPreferences"].map{|k, v| { k => v["enable"] == "on" }}.reduce({}, :merge),
+          "currentMembers" => members["currentMembers"],
+          "invitedByContactId" => group.dig("membership", "invitedBy", "byContactId"),
+          "invitedByGroupMemberId" => group.dig("membership", "invitedByGroupMemberId"),
+          "memberName" => group["membership"]["localDisplayName"],
+          "memberRole" => group["membership"]["memberRole"],
+          "memberCategory" => group["membership"]["memberCategory"],
+          "memberStatus" => group["membership"]["memberStatus"]
+        }
+      }
+    end
+
     private
 
     def next_corr_id
