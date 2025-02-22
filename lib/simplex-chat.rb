@@ -24,9 +24,13 @@ module SimpleXChat
       @uri = client_uri
       @message_queue = SizedQueue.new 4096
       @socket = nil
-      @listener_thread = nil
       @handshake = nil
+
+      # Helpers for handling requests to and messages from the SXC client
+      @listener_thread = nil
       @corr_id = Concurrent::AtomicFixnum.new(1) # Correlation ID for mapping client responses to command waiters
+      @command_waiters = Concurrent::Hash.new
+
       @logger = Logger.new($stderr)
       @logger.level = log_level
       @logger.progname = 'simplex-chat'
@@ -57,14 +61,22 @@ module SimpleXChat
           begin
             buf = @socket.read_nonblock 4096
             frame << buf
-            msg = frame.next
-            next if msg == nil
+            obj = frame.next
+            next if obj == nil
             # @logger.debug("Raw message: #{msg}")
 
-            obj = JSON.parse msg.to_s
-            @logger.debug("New message: #{obj}")
+            msg = JSON.parse obj.to_s
+            @logger.debug("New message: #{msg}")
 
-            @message_queue.push obj
+            corr_id = msg["corrId"]
+            single_use_queue = @command_waiters[corr_id]
+            if corr_id != nil && single_use_queue != nil
+              single_use_queue = @command_waiters[corr_id]
+              single_use_queue.push(msg)
+              @logger.debug("Message sent to waiter with corrId '#{corr_id}'")
+            else
+              @message_queue.push msg
+            end
           rescue IO::WaitReadable
             IO.select([@socket])
             retry
@@ -91,14 +103,44 @@ module SimpleXChat
       @message_queue.clear
     end
 
-    def connected?
-      @socket != nil
+    # Sends a raw command to the SimpleX Chat client
+    def send_command(cmd)
+      corr_id = next_corr_id
+      obj = {
+        "corrId" => corr_id,
+        "cmd" => cmd
+      }
+      json = obj.to_json
+      frame = WebSocket::Frame::Outgoing::Client.new(version: @handshake.version, data: json, type: :text)
+
+      # The listener thread will send the message
+      # that matches the corrId to this single
+      # use queue instead of the global message queue,
+      # and this function will poll it to wait for the
+      # command response
+      single_use_queue = SizedQueue.new 1
+      @command_waiters[corr_id] = single_use_queue
+
+      @socket.write frame.to_s
+
+      # TODO: Verify why it's taking too long
+      msg = nil
+      50.times do
+        begin
+          msg = single_use_queue.pop(true)
+        rescue ThreadError
+          sleep 0.1
+        end
+      end
+
+      msg
     end
 
     private
 
     def next_corr_id
-      @corr_id.update { |x| x + 1 } - 1
+      # The correlation ID has to be a string
+      (@corr_id.update { |x| x + 1 } - 1).to_s(10)
     end
   end
 end
