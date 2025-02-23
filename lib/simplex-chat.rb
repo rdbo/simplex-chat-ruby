@@ -8,6 +8,7 @@ module SimpleXChat
   require 'json'
   require 'websocket'
   require 'concurrent'
+  require 'time'
 
   # Fixes regex match for status line in HTTPResponse
   class HTTPResponse < Net::HTTPResponse
@@ -33,6 +34,7 @@ module SimpleXChat
     def initialize client_uri, connect: true, log_level: Logger::INFO
       @uri = client_uri
       @message_queue = SizedQueue.new 4096
+      @chat_message_queue = Queue.new
       @socket = nil
       @handshake = nil
 
@@ -97,7 +99,7 @@ module SimpleXChat
           rescue => e
             # TODO: Verify if this way of stopping the execution
             #       is graceful enough after implementing reconnects
-            puts "Unhandled exception caught: #{e}"
+            @logger.error "Unhandled exception caught: #{e}"
             @message_queue.close
             raise e
           end
@@ -111,10 +113,72 @@ module SimpleXChat
       @message_queue.pop
     end
 
+    def next_chat_message
+      # NOTE: There can be more than one message per
+      #       client message. Because of that, we use
+      #       a chat message queue to insert one or
+      #       more messages at a time, but poll just
+      #       one at a time
+      return @chat_message_queue.pop if not @chat_message_queue.empty?
+  
+      loop do
+        msg = next_message
+        break if msg == nil
+        next if not ["chatItemUpdated", "newChatItems"].include?(msg["type"])
+
+        chat_info_types = {
+          "direct" => ChatType::DIRECT,
+          "group" => ChatType::GROUP
+        }
+
+        # Handle one or more chat messages in a single client message
+        new_chat_messages = nil
+        if msg["type"] == "chatItemUpdated"
+          new_chat_messages = [msg["chatItem"]]
+        else
+          new_chat_messages = msg["chatItems"]
+        end
+
+        new_chat_messages.each do |chat_item|
+          chat_type = chat_info_types.dig(chat_item["chatInfo"]["type"])
+          group = nil
+          sender = nil
+          contact = nil
+          if chat_type == ChatType::GROUP
+            contact = chat_item["chatItem"]["chatDir"]["groupMember"]["localDisplayName"]
+            group = chat_item["chatInfo"]["groupInfo"]["localDisplayName"]
+            sender = group
+          else
+            contact = chat_item["chatInfo"]["contact"]["localDisplayName"]
+            sender = contact
+          end
+
+          msg_text = chat_item["chatItem"]["meta"]["itemText"]
+          timestamp = chat_item["chatItem"]["meta"]["updatedAt"]
+
+          chat_message = {
+            :chat_type => chat_type,
+            :sender => sender,
+            :contact => contact,
+            :group => group,
+            :msg_text => msg_text,
+            :msg_timestamp => Time.parse(timestamp)
+          }
+
+          @chat_message_queue.push chat_message
+        end
+
+        return @chat_message_queue.pop
+      end
+
+      nil
+    end
+
     def disconnect
       @listener_thread.terminate
       @socket.close
       @message_queue.clear
+      @chat_message_queue.clear
     end
 
     # Sends a raw command to the SimpleX Chat client

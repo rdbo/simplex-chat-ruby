@@ -2,12 +2,16 @@ require 'net/http'
 require 'logger'
 require_relative '../lib/simplex-chat'
 
-client = SimpleXChat::ClientAgent.new URI('ws://localhost:5225'), log_level: Logger::DEBUG
+puts "Connecting client..."
+client = SimpleXChat::ClientAgent.new URI('ws://localhost:5225') # , log_level: Logger::DEBUG
+
+puts "Sending commands..."
 version = client.api_version
 profile = client.api_profile
 address = client.api_get_user_address || client.api_create_user_address
 contacts = client.api_contacts
 groups = client.api_groups
+
 puts "==================================="
 puts
 puts
@@ -24,17 +28,16 @@ puts
 puts
 puts "==================================="
 
-# resp = client.api_send_text_message SimpleXChat::ChatType::GROUP, "new_group", "HELLO"
-# puts "------------------------------------"
-# puts "Send text message response: #{resp}"
-# puts "------------------------------------"
-
 puts "Listening for messages..."
 loop do
-  msg = client.next_message
-  if msg == nil
+  chat_msg = client.next_chat_message
+  if chat_msg == nil
     puts "Message queue is closed"
     break
   end
-  puts "Received message"
+  puts "Chat message: #{chat_msg}"
+  if chat_msg[:msg_text] == "/say_hello"
+    client.api_send_text_message chat_msg[:chat_type], chat_msg[:sender], "Hello! This was sent automagically"
+    puts "Command executed!"
+  end
 end
