@@ -41,13 +41,15 @@ Read `LICENSE` for more information.
    version = client.api_version
    puts "SimpleX Chat version: #{version}"
 
-   # Send text message
-   client.api_send_text_message SimpleXChat::ChatType::DIRECT, "some_user", "Hey, I'm using the Ruby API!"
-
    # Listen to incoming client messages
    loop do
-     msg = client.next_message
-     puts "New message from the client: #{msg}"
+     chat_msg = client.next_chat_message
+     break if chat_msg == nil
+
+     # Reply if user sends '/say_hello'
+     if chat_msg[:msg_text] == "/say_hello"
+       client.api_send_text_message chat_msg[:chat_type], chat_msg[:sender], "Hello! This was sent automagically"
+     end
    end
 
    # Much more... Read the examples for more information
