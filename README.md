@@ -13,33 +13,42 @@ Read `LICENSE` for more information.
 ## Usage
 
 1. Install the Gem from RubyGems
+   ```shell
+   gem install simplex-chat
+   ```
 
-        gem install simplex-chat
 
 2. Start your local simplex-chat client on port 5225 (or any port you wish)
 
-        simplex-chat -p 5225
+   ```shell
+   simplex-chat -p 5225
+   ```
 
 3. Connect the `SimpleXChat::ClientAgent` to your local client
 
-        require 'simplex-chat'
-        require 'net/http'
+   ```rb
+   require 'simplex-chat'
+   require 'net/http'
 
-        client = SimpleXChat::ClientAgent.new URI('ws://localhost:5225')
+   client = SimpleXChat::ClientAgent.new URI('ws://localhost:5225')
+   ```
+
 
 4. Now the client is connected and you can start using the APIs
 
-        # Get version
-        version = client.api_version
-        puts "SimpleX Chat version: #{version}"
+   ```rb
+   # Get version
+   version = client.api_version
+   puts "SimpleX Chat version: #{version}"
 
-        # Send text message
-        client.api_send_text_message SimpleXChat::ChatType::DIRECT, "some_user", "Hey, I'm using the Ruby API!"
+   # Send text message
+   client.api_send_text_message SimpleXChat::ChatType::DIRECT, "some_user", "Hey, I'm using the Ruby API!"
 
-        # Listen to incoming client messages
-        loop do
-            msg = client.next_message
-            puts "New message from the client: #{msg}"
-        end
+   # Listen to incoming client messages
+   loop do
+     msg = client.next_message
+     puts "New message from the client: #{msg}"
+   end
 
-        # Much more... Read the examples for more information
+   # Much more... Read the examples for more information
+   ```
