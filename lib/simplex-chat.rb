@@ -308,6 +308,16 @@ module SimpleXChat
       }
     end
 
+    def api_auto_accept is_enabled
+      onoff = is_enabled && "on" || "off"
+
+      resp = send_command "/auto_accept #{onoff}"
+      resp_type = resp["type"]
+      raise "Unexpected response: #{resp_type}" if resp_type != "userContactLinkUpdated"
+
+      nil
+    end
+
     private
 
     def next_corr_id
