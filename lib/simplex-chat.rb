@@ -28,6 +28,14 @@ module SimpleXChat
     CONTACT_REQUEST = '<@'
   end
 
+  module GroupMemberRole
+    AUTHOR = 'author' # reserved and unused as of now, but added anyways
+    OWNER = 'owner'
+    ADMIN = 'admin'
+    MEMBER = 'member'
+    OBSERVER = 'observer'
+  end
+
   class ClientAgent
     attr_accessor :on_message
 
@@ -50,9 +58,7 @@ module SimpleXChat
         "| [#{severity}] | #{datetime} | (#{progname}) :: #{msg}\n"
       }
 
-      if connect
-        self.connect
-      end
+      self.connect if connect
 
       @logger.debug("Initialized ClientAgent")
     end
@@ -144,8 +150,10 @@ module SimpleXChat
           group = nil
           sender = nil
           contact = nil
+          contact_role = nil
           if chat_type == ChatType::GROUP
             contact = chat_item["chatItem"]["chatDir"]["groupMember"]["localDisplayName"]
+            contact_role = chat_item["chatItem"]["chatDir"]["groupMember"]["memberRole"]
             group = chat_item["chatInfo"]["groupInfo"]["localDisplayName"]
             sender = group
           else
@@ -159,6 +167,7 @@ module SimpleXChat
           chat_message = {
             :chat_type => chat_type,
             :sender => sender,
+            :contact_role => contact_role,
             :contact => contact,
             :group => group,
             :msg_text => msg_text,
@@ -316,6 +325,12 @@ module SimpleXChat
       raise "Unexpected response: #{resp_type}" if resp_type != "userContactLinkUpdated"
 
       nil
+    end
+
+    def api_kick_group_member(group, member)
+      resp = send_command "/remove #{group} #{member}"
+      resp_type = resp["type"]
+      raise "Unexpected response: #{resp_type}" unless resp_type == "userDeletedMember"
     end
 
     private
