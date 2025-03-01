@@ -11,7 +11,7 @@ profile = client.api_profile
 address = client.api_get_user_address || client.api_create_user_address
 contacts = client.api_contacts
 groups = client.api_groups
-client.api_auto_accept true
+# client.api_auto_accept true
 
 puts "==================================="
 puts
