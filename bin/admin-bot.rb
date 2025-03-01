@@ -1,9 +1,10 @@
 require 'net/http'
 require 'logger'
 require_relative '../lib/simplex-chat'
+include SimpleXChat
 
 puts "Connecting client..."
-client = SimpleXChat::ClientAgent.new URI('ws://localhost:5225'), log_level: Logger::DEBUG
+client = ClientAgent.new URI('ws://localhost:5225'), log_level: Logger::DEBUG
 
 puts "Sending commands..."
 version = client.api_version
@@ -33,8 +34,8 @@ puts "==================================="
 
 def kick_command(client, group, issuer, issuer_role, subject)
   subject = subject.gsub(/^@/, "")
-  unless [SimpleXChat::GroupMemberRole::OWNER, SimpleXChat::GroupMemberRole::ADMIN].include?(issuer_role)
-    client.api_send_text_message SimpleXChat::ChatType::GROUP, group, "@#{issuer}: You do not have permissions to run this command"
+  unless [GroupMemberRole::OWNER, GroupMemberRole::ADMIN].include?(issuer_role)
+    client.api_send_text_message ChatType::GROUP, group, "@#{issuer}: You do not have permissions to run this command"
     return
   end
 
@@ -43,9 +44,9 @@ def kick_command(client, group, issuer, issuer_role, subject)
 
   begin
     client.api_kick_group_member group, subject
-    client.api_send_text_message SimpleXChat::ChatType::GROUP, group, "@#{issuer}: Kicked member '#{subject}' from '#{group}'"
+    client.api_send_text_message ChatType::GROUP, group, "@#{issuer}: Kicked member '#{subject}' from '#{group}'"
   rescue => e
-    client.api_send_text_message SimpleXChat::ChatType::GROUP, group, "@#{issuer}: Failed to kick group member '#{subject}'"
+    client.api_send_text_message ChatType::GROUP, group, "@#{issuer}: Failed to kick group member '#{subject}'"
   end
 end
 

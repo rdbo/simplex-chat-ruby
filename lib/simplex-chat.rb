@@ -39,7 +39,7 @@ module SimpleXChat
   class ClientAgent
     attr_accessor :on_message
 
-    def initialize client_uri, connect: true, log_level: Logger::INFO, timeout_ms: 10_000, interval_ms: 100
+    def initialize client_uri, connect: true, log_level: Logger::INFO, timeout_ms: 30_000, interval_ms: 100
       @uri = client_uri
       @message_queue = SizedQueue.new 4096
       @chat_message_queue = Queue.new
