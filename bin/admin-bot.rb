@@ -66,7 +66,7 @@ loop do
 
   case msg_text
     when /\A!say_hello\z/
-      client.api_send_text_message chat_msg[:chat_type], chat_msg[:sender], "@#{contact}: Hello! This was sent automagically"
+      client.api_send_text_message chat_msg[:chat_type], chat_msg[:sender], "@#{issuer}: Hello! This was sent automagically"
     when /\A!kick (\S*)\z/
       group = chat_msg[:group]
       subject = $1
@@ -77,7 +77,7 @@ loop do
 
       kick_command client, group, issuer, issuer_role, subject
     when /\A!\S+.*/
-      client.api_send_text_message chat_msg[:chat_type], chat_msg[:sender], "@#{contact}: Unknown command"
+      client.api_send_text_message chat_msg[:chat_type], chat_msg[:sender], "@#{issuer}: Unknown command"
     else
       next
   end
