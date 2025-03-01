@@ -342,6 +342,32 @@ module SimpleXChat
       raise "Unexpected response: #{resp_type}" unless resp_type == "userDeletedMember"
     end
 
+    # Parameters for /network:
+    #   - socks: on/off/<[ipv4]:port>
+    #   - socks-mode: always/onion
+    #   - smp-proxy: always/unknown/unprotected/never
+    #   - smp-proxy-fallback: no/protected/yes
+    #   - timeout: <seconds>
+    def api_network(socks: nil, socks_mode: nil, smp_proxy: nil, smp_proxy_fallback: nil, timeout_secs: nil)
+      args = {
+        "socks" => socks,
+        "socks-mode" => socks_mode,
+        "smp-proxy" => smp_proxy,
+        "smp-proxy-fallback" => smp_proxy_fallback,
+        "timeout" => timeout_secs
+      }
+      command = '/network'
+      args.each do |param, value|
+        next if value == nil
+        command += " #{param}=#{value}"
+      end
+      resp = send_command command
+      resp_type = resp["type"]
+      raise "Unexpected response: #{resp_type}" if resp_type != "networkConfig"
+
+      resp["networkConfig"]
+    end
+
     private
 
     def next_corr_id

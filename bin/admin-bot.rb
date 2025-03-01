@@ -12,6 +12,7 @@ profile = client.api_profile
 address = client.api_get_user_address || client.api_create_user_address
 contacts = client.api_contacts
 groups = client.api_groups
+network = client.api_network socks: "on" # Enable Tor/SOCKS/Onion routing
 # client.api_auto_accept true
 
 puts "==================================="
@@ -20,6 +21,7 @@ puts
 puts "SimpleX Chat version: #{version}"
 puts "Name: #{profile['name']}"
 puts "Address: #{address}"
+puts "SOCKS Mode: #{network["socksMode"]}"
 puts "Preferences:"
 profile["preferences"].each { |k, v| puts "  - #{k} => #{v && 'yes' || 'no'}"}
 puts "Contacts:"
