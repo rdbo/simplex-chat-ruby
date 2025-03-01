@@ -31,10 +31,10 @@ puts "==================================="
 
 ### COMMANDS ###
 
-def kick_command(client, group, member, contact, contact_role)
-  member = member.gsub(/^@/, "")
-  unless [SimpleXChat::GroupMemberRole::OWNER, SimpleXChat::GroupMemberRole::ADMIN].include?(contact_role)
-    client.api_send_text_message SimpleXChat::ChatType::GROUP, group, "@#{contact}: You do not have permissions to run this command"
+def kick_command(client, group, issuer, issuer_role, subject)
+  subject = subject.gsub(/^@/, "")
+  unless [SimpleXChat::GroupMemberRole::OWNER, SimpleXChat::GroupMemberRole::ADMIN].include?(issuer_role)
+    client.api_send_text_message SimpleXChat::ChatType::GROUP, group, "@#{issuer}: You do not have permissions to run this command"
     return
   end
 
@@ -42,10 +42,10 @@ def kick_command(client, group, member, contact, contact_role)
   #       Maybe simplex does this for us
 
   begin
-    client.api_kick_group_member group, member
-    client.api_send_text_message SimpleXChat::ChatType::GROUP, group, "@#{contact}: Kicked member '#{member}' from '#{group}'"
+    client.api_kick_group_member group, subject
+    client.api_send_text_message SimpleXChat::ChatType::GROUP, group, "@#{issuer}: Kicked member '#{subject}' from '#{group}'"
   rescue => e
-    client.api_send_text_message SimpleXChat::ChatType::GROUP, group, "@#{contact}: Failed to kick group member '#{member}'"
+    client.api_send_text_message SimpleXChat::ChatType::GROUP, group, "@#{issuer}: Failed to kick group member '#{subject}'"
   end
 end
 
@@ -61,21 +61,21 @@ loop do
   puts "Chat message: #{chat_msg}"
 
   msg_text = chat_msg[:msg_text]
-  contact = chat_msg[:contact]
+  issuer = chat_msg[:contact]
+  issuer_role = chat_msg[:contact_role]
 
   case msg_text
     when /\A!say_hello\z/
       client.api_send_text_message chat_msg[:chat_type], chat_msg[:sender], "@#{contact}: Hello! This was sent automagically"
     when /\A!kick (\S*)\z/
       group = chat_msg[:group]
-      member = $1
-      contact_role = chat_msg[:contact_role]
+      subject = $1
       if group == nil
         client.api_send_text_message chat_msg[:chat_type], chat_msg[:sender], "Not in a group"
         next
       end
 
-      kick_command client, group, member, contact, contact_role
+      kick_command client, group, issuer, issuer_role, subject
     when /\A!\S+.*/
       client.api_send_text_message chat_msg[:chat_type], chat_msg[:sender], "@#{contact}: Unknown command"
     else

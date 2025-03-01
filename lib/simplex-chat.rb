@@ -152,8 +152,11 @@ module SimpleXChat
           contact = nil
           contact_role = nil
           if chat_type == ChatType::GROUP
-            contact = chat_item["chatItem"]["chatDir"]["groupMember"]["localDisplayName"]
-            contact_role = chat_item["chatItem"]["chatDir"]["groupMember"]["memberRole"]
+            # NOTE: The group can "send messages" without a contact
+            #       For example, when a member is removed, the group
+            #       sends a message about his removal, with no contact
+            contact = chat_item.dig "chatItem", "chatDir", "groupMember", "localDisplayName"
+            contact_role = chat_item.dig "chatItem", "chatDir", "groupMember", "memberRole"
             group = chat_item["chatInfo"]["groupInfo"]["localDisplayName"]
             sender = group
           else
