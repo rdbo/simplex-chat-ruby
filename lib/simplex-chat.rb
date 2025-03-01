@@ -39,7 +39,7 @@ module SimpleXChat
   class ClientAgent
     attr_accessor :on_message
 
-    def initialize client_uri, connect: true, log_level: Logger::INFO
+    def initialize client_uri, connect: true, log_level: Logger::INFO, timeout_ms: 10_000, interval_ms: 100
       @uri = client_uri
       @message_queue = SizedQueue.new 4096
       @chat_message_queue = Queue.new
@@ -50,6 +50,8 @@ module SimpleXChat
       @listener_thread = nil
       @corr_id = Concurrent::AtomicFixnum.new(1) # Correlation ID for mapping client responses to command waiters
       @command_waiters = Concurrent::Hash.new
+      @timeout_ms = timeout_ms
+      @interval_ms = interval_ms
 
       @logger = Logger.new($stderr)
       @logger.level = log_level
@@ -194,7 +196,7 @@ module SimpleXChat
     end
 
     # Sends a raw command to the SimpleX Chat client
-    def send_command(cmd)
+    def send_command(cmd, timeout_ms: @timeout_ms, interval_ms: @interval_ms)
       corr_id = next_corr_id
       obj = {
         "corrId" => corr_id,
@@ -214,12 +216,16 @@ module SimpleXChat
       @socket.write frame.to_s
 
       msg = nil
-      100.times do
+      iterations = timeout_ms / interval_ms
+      iterations.times do
         begin
           msg = single_use_queue.pop(true)
           break
         rescue ThreadError
-          sleep 0.1
+          sleep(interval_ms / 1000.0)
+        ensure
+          # Clean up command_waiters
+          @command_waiters.delete corr_id
         end
       end
 
