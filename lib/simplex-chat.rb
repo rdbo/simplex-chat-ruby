@@ -22,6 +22,21 @@ module SimpleXChat
     end
   end
 
+  class GenericError < StandardError
+  end
+
+  class SendCommandError < GenericError
+    def initialize(cmd)
+      super "Failed to send command: #{cmd}"
+    end
+  end
+
+  class UnexpectedResponseError < GenericError
+    def initialize(type, expected_type)
+      super "Unexpected response type: #{type} (expected: #{expected_type})"
+    end
+  end
+
   module ChatType
     DIRECT = '@'
     GROUP = '#'
@@ -215,8 +230,10 @@ module SimpleXChat
       single_use_queue = SizedQueue.new 1
       @command_waiters[corr_id] = single_use_queue
 
+      @logger.debug("Sending command ##{corr_id}: #{json.to_s}")
       @socket.write frame.to_s
 
+      @logger.debug("Waiting response for command ##{corr_id}...")
       msg = nil
       iterations = timeout_ms / interval_ms
       iterations.times do
@@ -232,8 +249,10 @@ module SimpleXChat
       end
 
       if msg == nil
-        raise "Failed to send command"
+        raise SendCommandError.new(json.to_s)
       end
+
+      @logger.debug("Command ##{corr_id} sent successfully")
 
       msg
     end
@@ -241,7 +260,8 @@ module SimpleXChat
     def api_version
       resp = send_command '/version'
       resp_type = resp["type"]
-      raise "Unexpected response: #{resp_type}" if resp_type != "versionInfo"
+      expected_resp_type = "versionInfo"
+      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
 
       resp["versionInfo"]["version"]
     end
@@ -249,7 +269,8 @@ module SimpleXChat
     def api_profile
       resp = send_command '/profile'
       resp_type = resp["type"]
-      raise "Unexpected response: #{resp_type}" if resp_type != "userProfile"
+      expected_resp_type = "userProfile"
+      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
 
       {
         "name" => resp["user"]["profile"]["displayName"],
@@ -266,7 +287,8 @@ module SimpleXChat
         return nil
       end
   
-      raise "Unexpected response: #{resp_type}" if resp_type != "userContactLink"
+      expected_resp_type = "userContactLink"
+      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
 
       resp["contactLink"]["connReqContact"]
     end
@@ -274,7 +296,8 @@ module SimpleXChat
     def api_create_user_address
       resp = send_command '/address'
       resp_type = resp["type"]
-      raise "Unexpected response: #{resp_type}" if resp_type != "userContactLinkCreated"
+      expected_resp_type = "userContactLinkCreated"
+      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
 
       resp["connReqContact"]
     end
@@ -282,7 +305,8 @@ module SimpleXChat
     def api_send_text_message(chat_type, receiver, message)
       resp = send_command "#{chat_type}#{receiver} #{message}"
       resp_type = resp["type"]
-      raise "Unexpected response: #{resp_type}" if resp_type != "newChatItems"
+      expected_resp_type = "newChatItems"
+      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
 
       resp["chatItems"]
     end
@@ -290,7 +314,8 @@ module SimpleXChat
     def api_send_image(chat_type, receiver, file_path)
       resp = send_command "/image #{chat_type}#{receiver} #{file_path}"
       resp_type = resp["type"]
-      raise "Unexpected response: #{resp_type}" unless resp_type == "newChatItems"
+      expected_resp_type = "newChatItems"
+      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
 
       resp["chatItems"]
     end
@@ -298,7 +323,8 @@ module SimpleXChat
     def api_send_file(chat_type, receiver, file_path)
       resp = send_command "/file #{chat_type}#{receiver} #{file_path}"
       resp_type = resp["type"]
-      raise "Unexpected response: #{resp_type}" unless resp_type == "newChatItems"
+      expected_resp_type = "newChatItems"
+      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
 
       resp["chatItems"]
     end
@@ -306,7 +332,8 @@ module SimpleXChat
     def api_contacts
       resp = send_command "/contacts"
       resp_type = resp["type"]
-      raise "Unexpected response: #{resp_type}" if resp_type != "contactsList"
+      expected_resp_type = "contactsList"
+      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
 
       contacts = resp["contacts"]
       contacts.map{ |c| {
@@ -322,7 +349,8 @@ module SimpleXChat
     def api_groups
       resp = send_command "/groups"
       resp_type = resp["type"]
-      raise "Unexpected response: #{resp_type}" if resp_type != "groupsList"
+      expected_resp_type = "groupsList"
+      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
 
       groups = resp["groups"]
       groups.map{ |entry| 
@@ -349,7 +377,8 @@ module SimpleXChat
 
       resp = send_command "/auto_accept #{onoff}"
       resp_type = resp["type"]
-      raise "Unexpected response: #{resp_type}" if resp_type != "userContactLinkUpdated"
+      expected_resp_type = "userContactLinkUpdated"
+      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
 
       nil
     end
@@ -357,7 +386,8 @@ module SimpleXChat
     def api_kick_group_member(group, member)
       resp = send_command "/remove #{group} #{member}"
       resp_type = resp["type"]
-      raise "Unexpected response: #{resp_type}" unless resp_type == "userDeletedMember"
+      expected_resp_type = "userDeletedMember"
+      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
     end
 
     # Parameters for /network:
@@ -381,7 +411,8 @@ module SimpleXChat
       end
       resp = send_command command
       resp_type = resp["type"]
-      raise "Unexpected response: #{resp_type}" if resp_type != "networkConfig"
+      expected_resp_type = "networkConfig"
+      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
 
       resp["networkConfig"]
     end
