@@ -207,9 +207,6 @@ module SimpleXChat
           break
         rescue ThreadError
           sleep(interval_ms / 1000.0)
-        ensure
-          # Clean up command_waiters
-          @command_waiters.delete corr_id
         end
       end
 
@@ -217,9 +214,12 @@ module SimpleXChat
         raise SendCommandError.new(json.to_s)
       end
 
-      @logger.debug("Command ##{corr_id} sent successfully with response: #{msg}")
+      @logger.debug("Command ##{corr_id} finished successfully with response: #{msg}")
 
       msg
+    ensure
+      @command_waiters.delete corr_id
+      @logger.debug("Cleaned up command waiter ##{corr_id}")
     end
 
     def api_version
