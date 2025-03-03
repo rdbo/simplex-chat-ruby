@@ -295,6 +295,14 @@ module SimpleXChat
       resp["chatItems"]
     end
 
+    def api_send_file(chat_type, receiver, file_path)
+      resp = send_command "/file #{chat_type}#{receiver} #{file_path}"
+      resp_type = resp["type"]
+      raise "Unexpected response: #{resp_type}" unless resp_type == "newChatItems"
+
+      resp["chatItems"]
+    end
+
     def api_contacts
       resp = send_command "/contacts"
       resp_type = resp["type"]
