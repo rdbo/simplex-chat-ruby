@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 require_relative 'simplex-chat/version'
+require_relative 'simplex-chat/errors'
+require_relative 'simplex-chat/patches'
+require_relative 'simplex-chat/types'
 
 module SimpleXChat
   require 'net/http'
@@ -9,47 +12,6 @@ module SimpleXChat
   require 'websocket'
   require 'concurrent'
   require 'time'
-
-  # Fixes regex match for status line in HTTPResponse
-  class HTTPResponse < Net::HTTPResponse
-    class << self
-      def read_status_line(sock)
-        str = sock.readline
-        m = /\AHTTP(?:\/(\d+\.\d+))?\s+(\d\d\d)(?:\s+(.*))?\Z/in.match(str) or
-          raise Net::HTTPBadResponse, "wrong status line: #{str.dump}"
-        m.captures
-      end
-    end
-  end
-
-  class GenericError < StandardError
-  end
-
-  class SendCommandError < GenericError
-    def initialize(cmd)
-      super "Failed to send command: #{cmd}"
-    end
-  end
-
-  class UnexpectedResponseError < GenericError
-    def initialize(type, expected_type)
-      super "Unexpected response type: #{type} (expected: #{expected_type})"
-    end
-  end
-
-  module ChatType
-    DIRECT = '@'
-    GROUP = '#'
-    CONTACT_REQUEST = '<@'
-  end
-
-  module GroupMemberRole
-    AUTHOR = 'author' # reserved and unused as of now, but added anyways
-    OWNER = 'owner'
-    ADMIN = 'admin'
-    MEMBER = 'member'
-    OBSERVER = 'observer'
-  end
 
   class ClientAgent
     attr_accessor :on_message

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'net/http'
 require 'logger'
 require_relative '../lib/simplex-chat'
