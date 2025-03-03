@@ -54,14 +54,13 @@ def kick_command(client, group, issuer, issuer_role, subject)
   end
 end
 
-#################
+### LISTENER ###
 
-puts "Listening for messages..."
-loop do
+def event_listener(client)
   chat_msg = client.next_chat_message
   if chat_msg == nil
     puts "Message queue is closed"
-    break
+    return :stop
   end
   puts "Chat message: #{chat_msg}"
 
@@ -77,7 +76,7 @@ loop do
       subject = $1
       if group == nil
         client.api_send_text_message chat_msg[:chat_type], chat_msg[:sender], "Not in a group"
-        next
+        return
       end
 
       kick_command client, group, issuer, issuer_role, subject
@@ -86,6 +85,19 @@ loop do
     when /\A!\S+.*/
       client.api_send_text_message chat_msg[:chat_type], chat_msg[:sender], "@#{issuer}: Unknown command"
     else
-      next
+      return
+  end
+end
+
+### MAIN LOOP ###
+
+puts "Listening for messages..."
+loop do
+  begin
+    break if event_listener(client) == :stop
+  rescue SimpleXChat::GenericError => e
+    puts "[!] Caught error: #{e}"
+  rescue => e
+    raise e
   end
 end
