@@ -168,6 +168,7 @@ module SimpleXChat
 
           msg_text = chat_item["chatItem"]["meta"]["itemText"]
           timestamp = chat_item["chatItem"]["meta"]["updatedAt"]
+          image_preview = chat_item.dig "chatItem", "content", "msgContent", "image"
 
           chat_message = {
             :chat_type => chat_type,
@@ -176,7 +177,8 @@ module SimpleXChat
             :contact => contact,
             :group => group,
             :msg_text => msg_text,
-            :msg_timestamp => Time.parse(timestamp)
+            :msg_timestamp => Time.parse(timestamp),
+            :img_preview => image_preview
           }
 
           @chat_message_queue.push chat_message

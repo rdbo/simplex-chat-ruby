@@ -4,7 +4,7 @@ require_relative '../lib/simplex-chat'
 include SimpleXChat
 
 puts "Connecting client..."
-client = ClientAgent.new URI('ws://localhost:5225'), log_level: Logger::DEBUG
+client = ClientAgent.new URI('ws://localhost:5225')#, log_level: Logger::DEBUG
 
 puts "Sending commands..."
 version = client.api_version
