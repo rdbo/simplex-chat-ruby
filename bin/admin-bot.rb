@@ -4,7 +4,7 @@ require_relative '../lib/simplex-chat'
 include SimpleXChat
 
 puts "Connecting client..."
-client = ClientAgent.new URI('ws://localhost:5225')#, log_level: Logger::DEBUG
+client = ClientAgent.new URI('ws://localhost:5225'), log_level: Logger::DEBUG
 
 puts "Sending commands..."
 version = client.api_version
@@ -79,6 +79,8 @@ loop do
       end
 
       kick_command client, group, issuer, issuer_role, subject
+    when /\A!showcase\z/
+      client.api_send_image chat_msg[:chat_type], chat_msg[:sender], "#{Dir.pwd}/showcase.png"
     when /\A!\S+.*/
       client.api_send_text_message chat_msg[:chat_type], chat_msg[:sender], "@#{issuer}: Unknown command"
     else

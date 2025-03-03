@@ -279,10 +279,18 @@ module SimpleXChat
       resp["connReqContact"]
     end
 
-    def api_send_text_message(chat_type, contact, message)
-      resp = send_command "#{chat_type}#{contact} #{message}"
+    def api_send_text_message(chat_type, receiver, message)
+      resp = send_command "#{chat_type}#{receiver} #{message}"
       resp_type = resp["type"]
       raise "Unexpected response: #{resp_type}" if resp_type != "newChatItems"
+
+      resp["chatItems"]
+    end
+
+    def api_send_image(chat_type, receiver, file_path)
+      resp = send_command "/image #{chat_type}#{receiver} #{file_path}"
+      resp_type = resp["type"]
+      raise "Unexpected response: #{resp_type}" unless resp_type == "newChatItems"
 
       resp["chatItems"]
     end
