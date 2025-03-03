@@ -16,7 +16,7 @@ module SimpleXChat
   class ClientAgent
     attr_accessor :on_message
 
-    def initialize client_uri, connect: true, log_level: Logger::INFO, timeout_ms: 30_000, interval_ms: 100
+    def initialize(client_uri, connect: true, log_level: Logger::INFO, timeout_ms: 10_000, interval_ms: 100)
       @uri = client_uri
       @message_queue = SizedQueue.new 4096
       @chat_message_queue = Queue.new
@@ -64,6 +64,7 @@ module SimpleXChat
 
             msg = JSON.parse obj.to_s
             # @logger.debug("New message: #{msg}")
+            # @logger.debug("Command waiters: #{@command_waiters}")
 
             corr_id = msg["corrId"]
             resp = msg["resp"]
@@ -73,6 +74,7 @@ module SimpleXChat
               single_use_queue.push(resp)
               @logger.debug("Message sent to waiter with corrId '#{corr_id}'")
             else
+              @logger.debug("Message put on message queue")
               @message_queue.push resp
             end
           rescue IO::WaitReadable
@@ -191,6 +193,7 @@ module SimpleXChat
       # command response
       single_use_queue = SizedQueue.new 1
       @command_waiters[corr_id] = single_use_queue
+      @logger.debug("Created command waiter for command ##{corr_id}")
 
       @logger.debug("Sending command ##{corr_id}: #{json.to_s}")
       @socket.write frame.to_s
@@ -214,7 +217,7 @@ module SimpleXChat
         raise SendCommandError.new(json.to_s)
       end
 
-      @logger.debug("Command ##{corr_id} sent successfully")
+      @logger.debug("Command ##{corr_id} sent successfully with response: #{msg}")
 
       msg
     end
