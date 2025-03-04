@@ -126,7 +126,7 @@ module SimpleXChat
         new_chat_messages.each do |chat_item|
           chat_message = parse_chat_item chat_item
 
-          time_diff = Time.now - chat_message[:timestamp]
+          time_diff = Time.now - chat_message[:msg_timestamp]
           if max_backlog_secs != nil && time_diff > max_backlog_secs
             @logger.debug("Skipped message (time diff: #{time_diff}, max allowed: #{max_backlog_secs}): #{chat_message}")
             next
