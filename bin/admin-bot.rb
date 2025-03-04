@@ -15,6 +15,7 @@ address = client.api_get_user_address || client.api_create_user_address
 contacts = client.api_contacts
 groups = client.api_groups
 network = client.api_network socks: "on" # Enable Tor/SOCKS/Onion routing
+last_messages = client.api_tail message_count: 5
 # client.api_auto_accept true
 
 puts "==================================="
@@ -30,6 +31,8 @@ puts "Contacts:"
 contacts.each { |c| puts "  - #{c['name']} (#{c['id']}) -> #{c['mergedPreferences'].map{|k, v| "#{k}: #{v}"}.join ', '}"}
 puts "Groups:"
 groups.each { |g| puts "  - #{g['name']} (#{g['id']}) -> alias: #{g['memberName']}, role: #{g['memberRole']}, members: #{g['currentMembers']}" }
+puts "Last Messages:"
+last_messages.each{ |m| puts "  - #{m[:chat_type]}#{m[:sender]}: #{m[:msg_text]}" }
 puts
 puts
 puts "==================================="

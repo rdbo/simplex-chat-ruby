@@ -115,11 +115,6 @@ module SimpleXChat
         break if msg == nil
         next if not ["chatItemUpdated", "newChatItems"].include?(msg["type"])
 
-        chat_info_types = {
-          "direct" => ChatType::DIRECT,
-          "group" => ChatType::GROUP
-        }
-
         # Handle one or more chat messages in a single client message
         new_chat_messages = nil
         if msg["type"] == "chatItemUpdated"
@@ -129,40 +124,9 @@ module SimpleXChat
         end
 
         new_chat_messages.each do |chat_item|
-          chat_type = chat_info_types.dig(chat_item["chatInfo"]["type"])
-          group = nil
-          sender = nil
-          contact = nil
-          contact_role = nil
-          if chat_type == ChatType::GROUP
-            # NOTE: The group can "send messages" without a contact
-            #       For example, when a member is removed, the group
-            #       sends a message about his removal, with no contact
-            contact = chat_item.dig "chatItem", "chatDir", "groupMember", "localDisplayName"
-            contact_role = chat_item.dig "chatItem", "chatDir", "groupMember", "memberRole"
-            group = chat_item["chatInfo"]["groupInfo"]["localDisplayName"]
-            sender = group
-          else
-            contact = chat_item["chatInfo"]["contact"]["localDisplayName"]
-            sender = contact
-          end
+          chat_message = parse_chat_item chat_item
 
-          msg_text = chat_item["chatItem"]["meta"]["itemText"]
-          timestamp = Time.parse(chat_item["chatItem"]["meta"]["updatedAt"])
-          image_preview = chat_item.dig "chatItem", "content", "msgContent", "image"
-
-          chat_message = {
-            :chat_type => chat_type,
-            :sender => sender,
-            :contact_role => contact_role,
-            :contact => contact,
-            :group => group,
-            :msg_text => msg_text,
-            :msg_timestamp => timestamp,
-            :img_preview => image_preview
-          }
-
-          time_diff = Time.now - timestamp
+          time_diff = Time.now - chat_message[:timestamp]
           if max_backlog_secs != nil && time_diff > max_backlog_secs
             @logger.debug("Skipped message (time diff: #{time_diff}, max allowed: #{max_backlog_secs}): #{chat_message}")
             next
@@ -232,18 +196,14 @@ module SimpleXChat
 
     def api_version
       resp = send_command '/version'
-      resp_type = resp["type"]
-      expected_resp_type = "versionInfo"
-      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
+      check_response_type(resp, "versionInfo")
 
       resp["versionInfo"]["version"]
     end
 
     def api_profile
       resp = send_command '/profile'
-      resp_type = resp["type"]
-      expected_resp_type = "userProfile"
-      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
+      check_response_type(resp, "userProfile")
 
       {
         "name" => resp["user"]["profile"]["displayName"],
@@ -259,54 +219,42 @@ module SimpleXChat
       if resp_type == "chatCmdError" && resp.dig("chatError", "storeError", "type") == "userContactLinkNotFound"
         return nil
       end
-  
-      expected_resp_type = "userContactLink"
-      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
+      check_response_type(resp, "userContactLink")
 
       resp["contactLink"]["connReqContact"]
     end
 
     def api_create_user_address
       resp = send_command '/address'
-      resp_type = resp["type"]
-      expected_resp_type = "userContactLinkCreated"
-      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
+      check_response_type(resp, "userContactLinkCreated")
 
       resp["connReqContact"]
     end
 
     def api_send_text_message(chat_type, receiver, message)
       resp = send_command "#{chat_type}#{receiver} #{message}"
-      resp_type = resp["type"]
-      expected_resp_type = "newChatItems"
-      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
+      check_response_type(resp, "newChatItems")
 
       resp["chatItems"]
     end
 
     def api_send_image(chat_type, receiver, file_path)
       resp = send_command "/image #{chat_type}#{receiver} #{file_path}"
-      resp_type = resp["type"]
-      expected_resp_type = "newChatItems"
-      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
+      check_response_type(resp, "newChatItems")
 
       resp["chatItems"]
     end
 
     def api_send_file(chat_type, receiver, file_path)
       resp = send_command "/file #{chat_type}#{receiver} #{file_path}"
-      resp_type = resp["type"]
-      expected_resp_type = "newChatItems"
-      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
+      check_response_type(resp, "newChatItems")
 
       resp["chatItems"]
     end
 
     def api_contacts
       resp = send_command "/contacts"
-      resp_type = resp["type"]
-      expected_resp_type = "contactsList"
-      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
+      check_response_type(resp, "contactsList")
 
       contacts = resp["contacts"]
       contacts.map{ |c| {
@@ -321,9 +269,7 @@ module SimpleXChat
 
     def api_groups
       resp = send_command "/groups"
-      resp_type = resp["type"]
-      expected_resp_type = "groupsList"
-      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
+      check_response_type(resp, "groupsList")
 
       groups = resp["groups"]
       groups.map{ |entry| 
@@ -349,18 +295,14 @@ module SimpleXChat
       onoff = is_enabled && "on" || "off"
 
       resp = send_command "/auto_accept #{onoff}"
-      resp_type = resp["type"]
-      expected_resp_type = "userContactLinkUpdated"
-      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
+      check_response_type(resp, "userContactLinkUpdated")
 
       nil
     end
 
     def api_kick_group_member(group, member)
       resp = send_command "/remove #{group} #{member}"
-      resp_type = resp["type"]
-      expected_resp_type = "userDeletedMember"
-      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
+      check_response_type(resp, "userDeletedMember")
     end
 
     # Parameters for /network:
@@ -383,18 +325,71 @@ module SimpleXChat
         command += " #{param}=#{value}"
       end
       resp = send_command command
-      resp_type = resp["type"]
-      expected_resp_type = "networkConfig"
-      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
+      check_response_type(resp, "networkConfig")
 
       resp["networkConfig"]
     end
 
+    def api_tail(chat_type: nil, conversation: nil, message_count: nil)
+      cmd = "/tail"
+      cmd += " #{chat_type}#{conversation}" if chat_type != nil && conversation != nil
+      cmd += " #{message_count}" if message_count != nil
+      resp = send_command cmd
+      check_response_type(resp, "chatItems")
+
+      resp["chatItems"].map{|chat_item| parse_chat_item chat_item}
+    end
+
     private
+
+    def check_response_type(resp, expected_resp_type)
+      resp_type = resp["type"]
+      raise UnexpectedResponseError.new(resp_type, expected_resp_type) unless resp_type == expected_resp_type
+    end
 
     def next_corr_id
       # The correlation ID has to be a string
       (@corr_id.update { |x| x + 1 } - 1).to_s(10)
+    end
+
+    def parse_chat_item(chat_item)
+      chat_info_types = {
+        "direct" => ChatType::DIRECT,
+        "group" => ChatType::GROUP
+      }
+
+      chat_type = chat_info_types.dig(chat_item["chatInfo"]["type"])
+      group = nil
+      sender = nil
+      contact = nil
+      contact_role = nil
+      if chat_type == ChatType::GROUP
+        # NOTE: The group can "send messages" without a contact
+        #       For example, when a member is removed, the group
+        #       sends a message about his removal, with no contact
+        contact = chat_item.dig "chatItem", "chatDir", "groupMember", "localDisplayName"
+        contact_role = chat_item.dig "chatItem", "chatDir", "groupMember", "memberRole"
+        group = chat_item["chatInfo"]["groupInfo"]["localDisplayName"]
+        sender = group
+      else
+        contact = chat_item["chatInfo"]["contact"]["localDisplayName"]
+        sender = contact
+      end
+
+      msg_text = chat_item["chatItem"]["meta"]["itemText"]
+      timestamp = Time.parse(chat_item["chatItem"]["meta"]["updatedAt"])
+      image_preview = chat_item.dig "chatItem", "content", "msgContent", "image"
+
+      chat_message = {
+        :chat_type => chat_type,
+        :sender => sender,
+        :contact_role => contact_role,
+        :contact => contact,
+        :group => group,
+        :msg_text => msg_text,
+        :msg_timestamp => timestamp,
+        :img_preview => image_preview
+      }
     end
   end
 end
