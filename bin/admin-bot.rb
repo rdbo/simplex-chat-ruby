@@ -57,7 +57,7 @@ end
 ### LISTENER ###
 
 def event_listener(client)
-  chat_msg = client.next_chat_message
+  chat_msg = client.next_chat_message(max_backlog_secs: 5.0)
   if chat_msg == nil
     puts "Message queue is closed"
     return :stop

@@ -100,7 +100,9 @@ module SimpleXChat
       @message_queue.pop
     end
 
-    def next_chat_message
+    def next_chat_message(
+      max_backlog_secs: 15.0 # if nil, it will process any incoming messages, including old ones
+    )
       # NOTE: There can be more than one message per
       #       client message. Because of that, we use
       #       a chat message queue to insert one or
@@ -146,7 +148,7 @@ module SimpleXChat
           end
 
           msg_text = chat_item["chatItem"]["meta"]["itemText"]
-          timestamp = chat_item["chatItem"]["meta"]["updatedAt"]
+          timestamp = Time.parse(chat_item["chatItem"]["meta"]["updatedAt"])
           image_preview = chat_item.dig "chatItem", "content", "msgContent", "image"
 
           chat_message = {
@@ -156,9 +158,15 @@ module SimpleXChat
             :contact => contact,
             :group => group,
             :msg_text => msg_text,
-            :msg_timestamp => Time.parse(timestamp),
+            :msg_timestamp => timestamp,
             :img_preview => image_preview
           }
+
+          time_diff = Time.now - timestamp
+          if max_backlog_secs != nil && time_diff > max_backlog_secs
+            @logger.debug("Skipped message (time diff: #{time_diff}, max allowed: #{max_backlog_secs}): #{chat_message}")
+            next
+          end
 
           @chat_message_queue.push chat_message
         end
