@@ -340,6 +340,31 @@ module SimpleXChat
       resp["chatItems"].map{|chat_item| parse_chat_item chat_item}
     end
 
+    def api_chats(
+      chat_count=20 # if nil, will return all the chats
+    )
+      param = chat_count != nil ? "#{chat_count}" : "all"
+      cmd = "/chats #{param}"
+      resp = send_command cmd
+      check_response_type(resp, "chats")
+
+      resp["chats"].map do |chat|
+        chat_type = parse_chat_info_type chat["chatInfo"]["type"]
+        next if chat_type == nil # WARN: Chat type "local" is currently ignored
+        conversation = nil
+        if chat_type == ChatType::GROUP
+          conversation = chat["chatInfo"]["groupInfo"]["localDisplayName"]
+        else
+          conversation = chat["chatInfo"]["contact"]["localDisplayName"]
+        end
+
+        {
+          :chat_type => chat_type,
+          :conversation => conversation
+        }
+      end
+    end
+
     private
 
     def check_response_type(resp, expected_resp_type)
@@ -352,13 +377,17 @@ module SimpleXChat
       (@corr_id.update { |x| x + 1 } - 1).to_s(10)
     end
 
-    def parse_chat_item(chat_item)
+    def parse_chat_info_type(type)
       chat_info_types = {
         "direct" => ChatType::DIRECT,
         "group" => ChatType::GROUP
       }
 
-      chat_type = chat_info_types.dig(chat_item["chatInfo"]["type"])
+      chat_info_types.dig(type)
+    end
+
+    def parse_chat_item(chat_item)
+      chat_type = parse_chat_info_type chat_item["chatInfo"]["type"]
       group = nil
       sender = nil
       contact = nil

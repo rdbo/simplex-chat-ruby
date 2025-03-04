@@ -16,6 +16,7 @@ contacts = client.api_contacts
 groups = client.api_groups
 network = client.api_network socks: "on" # Enable Tor/SOCKS/Onion routing
 last_messages = client.api_tail message_count: 5
+last_chats = client.api_chats 5
 # client.api_auto_accept true
 
 puts "==================================="
@@ -33,6 +34,8 @@ puts "Groups:"
 groups.each { |g| puts "  - #{g['name']} (#{g['id']}) -> alias: #{g['memberName']}, role: #{g['memberRole']}, members: #{g['currentMembers']}" }
 puts "Last Messages:"
 last_messages.each{ |m| puts "  - #{m[:chat_type]}#{m[:sender]}: #{m[:msg_text]}" }
+puts "Last Chats:"
+last_chats.each{ |c| puts "  - #{c[:chat_type]}#{c[:conversation]}" }
 puts
 puts
 puts "==================================="
