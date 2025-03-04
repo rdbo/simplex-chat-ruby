@@ -402,35 +402,52 @@ module SimpleXChat
     def parse_chat_item(chat_item)
       chat_type = parse_chat_info_type chat_item["chatInfo"]["type"]
       group = nil
+      group_id = nil
       sender = nil
+      sender_id = nil
       contact = nil
+      contact_id = nil
       contact_role = nil
       if chat_type == ChatType::GROUP
         # NOTE: The group can "send messages" without a contact
         #       For example, when a member is removed, the group
         #       sends a message about his removal, with no contact
         contact = chat_item.dig "chatItem", "chatDir", "groupMember", "localDisplayName"
+        contact_id = chat_item.dig "chatItem", "chatDir", "groupMember", "groupMemberId"
         contact_role = chat_item.dig "chatItem", "chatDir", "groupMember", "memberRole"
         group = chat_item["chatInfo"]["groupInfo"]["localDisplayName"]
+        group_id = chat_item["chatInfo"]["groupInfo"]["groupId"]
         sender = group
+        sender_id = group_id
       else
         contact = chat_item["chatInfo"]["contact"]["localDisplayName"]
+        contact_id = chat_item["chatInfo"]["contact"]["contactId"]
         sender = contact
+        sender_id = contact_id
       end
 
       msg_text = chat_item["chatItem"]["meta"]["itemText"]
+      msg_item_id = chat_item["chatItem"]["meta"]["itemId"]
       timestamp = Time.parse(chat_item["chatItem"]["meta"]["updatedAt"])
-      image_preview = chat_item.dig "chatItem", "content", "msgContent", "image"
+      msg_image_preview = chat_item.dig "chatItem", "content", "msgContent", "image"
 
       chat_message = {
         :chat_type => chat_type,
+
         :sender => sender,
-        :contact_role => contact_role,
+        :sender_id => sender_id,
+
         :contact => contact,
+        :contact_id => contact_id,
+        :contact_role => contact_role,
+
         :group => group,
+        :group_id => group_id,
+
         :msg_text => msg_text,
+        :msg_item_id => msg_item_id,
         :msg_timestamp => timestamp,
-        :img_preview => image_preview
+        :msg_img_preview => msg_image_preview
       }
     end
   end

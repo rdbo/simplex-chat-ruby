@@ -74,6 +74,11 @@ def event_listener(client)
   issuer = chat_msg[:contact]
   issuer_role = chat_msg[:contact_role]
 
+  # React to all messages we will process
+  if msg_text.start_with?("!")
+      client.api_reaction chat_msg[:chat_type], chat_msg[:sender_id], chat_msg[:msg_item_id], emoji: '🚀'
+  end
+
   case msg_text
     when /\A!say_hello\z/
       client.api_send_text_message chat_msg[:chat_type], chat_msg[:sender], "@#{issuer}: Hello! This was sent automagically"
