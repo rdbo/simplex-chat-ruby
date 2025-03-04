@@ -365,6 +365,19 @@ module SimpleXChat
       end.filter { |x| x != nil }
     end
 
+    # TODO: Add `/_reaction members` support, either on this
+    #       function or in a separate one
+    def api_reaction(chat_type, chat_id, message_item_id, add: true, emoji: '👍')
+      onoff = add ? "on" : "off"
+      param_obj = {
+        "type" => "emoji",
+        "emoji" => emoji
+      }
+      cmd = "/_reaction #{chat_type}#{chat_id} #{message_item_id} #{onoff} #{param_obj.to_json}"
+      resp = send_command cmd
+      check_response_type(resp, "chatItemReaction")
+    end
+
     private
 
     def check_response_type(resp, expected_resp_type)
