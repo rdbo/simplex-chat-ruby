@@ -362,7 +362,7 @@ module SimpleXChat
           :chat_type => chat_type,
           :conversation => conversation
         }
-      end
+      end.filter { |x| x != nil }
     end
 
     private
