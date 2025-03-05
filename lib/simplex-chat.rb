@@ -18,7 +18,7 @@ module SimpleXChat
 
     def initialize(client_uri, connect: true, log_level: Logger::INFO, timeout_ms: 10_000, interval_ms: 100)
       @uri = client_uri
-      @message_queue = SizedQueue.new 4096
+      @message_queue = Queue.new
       @chat_message_queue = Queue.new
       @socket = nil
       @handshake = nil
@@ -74,8 +74,8 @@ module SimpleXChat
               single_use_queue.push(resp)
               @logger.debug("Message sent to waiter with corrId '#{corr_id}'")
             else
-              @logger.debug("Message put on message queue")
               @message_queue.push resp
+              @logger.debug("Message put on message queue (number of messages in queue: #{@message_queue.size})")
             end
           rescue IO::WaitReadable
             IO.select([@socket])
