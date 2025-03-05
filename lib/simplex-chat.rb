@@ -110,7 +110,13 @@ module SimpleXChat
       #       a chat message queue to insert one or
       #       more messages at a time, but poll just
       #       one at a time
-      return @chat_message_queue.pop if not @chat_message_queue.empty?
+      # NOTE: We use non-blocking pop for thread safety
+      begin
+        chat_msg = @chat_message_queue.pop(true)
+        return chat_msg
+      rescue ThreadError
+        @logger.debug("Chat message queue is empty, waiting for new messages...")
+      end
   
       loop do
         msg = next_message
@@ -135,13 +141,20 @@ module SimpleXChat
           end
 
           @chat_message_queue.push chat_message
+          @logger.debug("Chat message pushed to queue: #{chat_message}")
         end
 
         # NOTE: Even after parsing the messages, the
         #       chat message queue can be empty because
         #       all the messages are too old, so we have
         #       to check again
-        return @chat_message_queue.pop if not @chat_message_queue.empty?
+        begin
+          chat_msg = @chat_message_queue.pop(true)
+          @logger.debug("Chat message popped from queue")
+          return chat_msg
+        rescue ThreadError
+          @logger.debug("Chat message queue is still empty, waiting for new messages...")
+        end
       end
 
       nil
