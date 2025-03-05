@@ -97,7 +97,9 @@ module SimpleXChat
     end
 
     def next_message
-      @message_queue.pop
+      msg = @message_queue.pop
+      @logger.debug("Message retrieved from queue (number of messages in queue: #{@message_queue.size})")
+      msg
     end
 
     def next_chat_message(
@@ -135,7 +137,11 @@ module SimpleXChat
           @chat_message_queue.push chat_message
         end
 
-        return @chat_message_queue.pop
+        # NOTE: Even after parsing the messages, the
+        #       chat message queue can be empty because
+        #       all the messages are too old, so we have
+        #       to check again
+        return @chat_message_queue.pop if not @chat_message_queue.empty?
       end
 
       nil
