@@ -10,6 +10,41 @@ module SimpleXChat
       @min_role = min_role
     end
 
+    def validate_and_execute(client, chat_msg, args)
+      return if not validate(client, chat_msg, args)
+      execute client, chat_msg, args
+    end
+
+    private
+
+    def validate(client, chat_msg, args)
+      msg_text = chat_msg[:msg_text]
+      chat_type = chat_msg[:chat_type]
+      issuer = chat_msg[:contact]
+      issuer_role = chat_msg[:contact_role]
+      sender = chat_msg[:sender]
+
+      # Verify that user has permissions to run the command
+      role_hierarchy = {
+        GroupMemberRole::MEMBER => 0,
+        GroupMemberRole::ADMIN => 1,
+        GroupMemberRole::OWNER => 2
+      }
+      perms = role_hierarchy[issuer_role]
+      if perms == nil or perms < role_hierarchy[@min_role]
+        client.api_send_text_message chat_type, sender, "@#{issuer}: You do not have permission to run this command (required: #{@min_role})"
+        return false
+      end
+
+      # Verify arguments
+      if args.length != @num_args
+        client.api_send_text_message chat_type, sender, "@#{issuer}: Incorrect number of arguments (required: #{@num_args})"
+        return false
+      end
+
+      return true
+    end
+
     def execute(client, chat_msg, args)
       raise NoMethodError.new(
         "[!] Default BasicCommand::execute called, nothing will be done\n" \
@@ -71,28 +106,11 @@ module SimpleXChat
         return
       end
 
-      # Verify that user has permissions to run the command
-      role_hierarchy = {
-        GroupMemberRole::MEMBER => 0,
-        GroupMemberRole::ADMIN => 1,
-        GroupMemberRole::OWNER => 2
-      }
-      perms = role_hierarchy[issuer_role]
-      if perms == nil or perms < role_hierarchy[command.min_role]
-        @client.api_send_text_message chat_msg[:chat_type], chat_msg[:sender], "@#{issuer}: You do not have permission to run this command (required: #{command.min_role})"
-        return
-      end
-
-      # Verify arguments
       args = message_items[1..]
-      if args.length != command.num_args
-        @client.api_send_text_message chat_msg[:chat_type], chat_msg[:sender], "@#{issuer}: Incorrect number of arguments (required: #{command.num_args})"
-        return
-      end
 
       # Run command
-      puts "Executing command: #{command} for: #{chat_type}#{sender} [#{issuer}]: #{msg_text}"
-      command.execute @client, chat_msg, args
+      puts "Validating and executing command '#{command.name}' for: #{chat_type}#{sender} [#{issuer}]: #{msg_text}"
+      command.validate_and_execute @client, chat_msg, args
     end
   end
 end
