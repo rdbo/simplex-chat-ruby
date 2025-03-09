@@ -3,6 +3,8 @@
 require 'net/http'
 require 'logger'
 require_relative '../lib/simplex-chat'
+require_relative 'cmd-runner'
+require_relative 'commands'
 include SimpleXChat
 
 puts "Connecting client..."
@@ -18,6 +20,9 @@ network = client.api_network socks: "on" # Enable Tor/SOCKS/Onion routing
 last_messages = client.api_tail message_count: 5
 last_chats = client.api_chats 5
 # client.api_auto_accept true
+
+command_prefix = '!'
+commands = [SayHelloCommand.new, KickCommand.new, ShowcaseCommand.new]
 
 puts "==================================="
 puts
@@ -36,79 +41,11 @@ puts "Last Messages:"
 last_messages.each{ |m| puts "  - #{m[:chat_type]}#{m[:sender]}: #{m[:msg_text]}" }
 puts "Last Chats:"
 last_chats.each{ |c| puts "  - #{c[:chat_type]}#{c[:conversation]}" }
+puts "Commands:"
+commands.each { |cmd| puts "  - #{command_prefix}#{cmd.name}: #{cmd.desc}"}
 puts
 puts
 puts "==================================="
 
-### COMMANDS ###
-
-def kick_command(client, group, issuer, issuer_role, subject)
-  subject = subject.gsub(/^@/, "")
-  unless [GroupMemberRole::OWNER, GroupMemberRole::ADMIN].include?(issuer_role)
-    client.api_send_text_message ChatType::GROUP, group, "@#{issuer}: You do not have permissions to run this command"
-    return
-  end
-
-  # TODO: Check member role before kicking him - he may be an admin or owner (?)
-  #       Maybe simplex does this for us
-
-  begin
-    client.api_kick_group_member group, subject
-    client.api_send_text_message ChatType::GROUP, group, "@#{issuer}: Kicked member '#{subject}' from '#{group}'"
-  rescue => e
-    client.api_send_text_message ChatType::GROUP, group, "@#{issuer}: Failed to kick group member '#{subject}'"
-  end
-end
-
-### LISTENER ###
-
-def event_listener(client)
-  chat_msg = client.next_chat_message(max_backlog_secs: 5.0)
-  if chat_msg == nil
-    puts "Message queue is closed"
-    return :stop
-  end
-  puts "Chat message: #{chat_msg}"
-
-  msg_text = chat_msg[:msg_text]
-  issuer = chat_msg[:contact]
-  issuer_role = chat_msg[:contact_role]
-
-  # React to all messages we will process
-  if msg_text.start_with?("!")
-      client.api_reaction chat_msg[:chat_type], chat_msg[:sender_id], chat_msg[:msg_item_id], emoji: '🚀'
-  end
-
-  case msg_text
-    when /\A!say_hello\z/
-      client.api_send_text_message chat_msg[:chat_type], chat_msg[:sender], "@#{issuer}: Hello! This was sent automagically"
-    when /\A!kick (\S*)\z/
-      group = chat_msg[:group]
-      subject = $1
-      if group == nil
-        client.api_send_text_message chat_msg[:chat_type], chat_msg[:sender], "Not in a group"
-        return
-      end
-
-      kick_command client, group, issuer, issuer_role, subject
-    when /\A!showcase\z/
-      client.api_send_image chat_msg[:chat_type], chat_msg[:sender], "#{Dir.pwd}/showcase.png"
-    when /\A!\S+.*/
-      client.api_send_text_message chat_msg[:chat_type], chat_msg[:sender], "@#{issuer}: Unknown command"
-    else
-      return
-  end
-end
-
-### MAIN LOOP ###
-
-puts "Listening for messages..."
-loop do
-  begin
-    break if event_listener(client) == :stop
-  rescue SimpleXChat::GenericError => e
-    puts "[!] Caught error: #{e}"
-  rescue => e
-    raise e
-  end
-end
+runner = BasicCommandRunner.new(client, commands, command_prefix)
+runner.listen
