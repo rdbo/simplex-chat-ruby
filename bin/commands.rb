@@ -69,7 +69,6 @@ class ShowcaseCommand < BasicCommand
       return
     end
 
-    # client.api_send_image chat_msg[:chat_type], chat_msg[:sender], "#{Dir.pwd}/showcase.png"
-    client.api_send_text_message chat_type, sender, "@#{issuer}: NOT ON COOLDOWN"
+    client.api_send_image chat_msg[:chat_type], chat_msg[:sender], "#{Dir.pwd}/showcase.png"
   end
 end
