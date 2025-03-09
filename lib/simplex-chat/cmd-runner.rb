@@ -3,11 +3,14 @@ module SimpleXChat
     attr_reader :name, :num_args, :desc, :min_role
 
     # TODO: Allow optional arguments
-    def initialize(name, desc="", num_args: 0, min_role: GroupMemberRole::MEMBER)
+    def initialize(name, desc="", num_args: 0, min_role: GroupMemberRole::MEMBER, per_sender_cooldown_secs: nil)
       @name = name
       @num_args = num_args
       @desc = desc
       @min_role = min_role
+      @per_sender_cooldown_secs = per_sender_cooldown_secs
+      @sender_last_run = {}
+      @sender_last_run_lock = Mutex.new
     end
 
     def validate_and_execute(client, chat_msg, args)
@@ -31,7 +34,7 @@ module SimpleXChat
         GroupMemberRole::OWNER => 2
       }
       perms = role_hierarchy[issuer_role]
-      if perms == nil or perms < role_hierarchy[@min_role]
+      if issuer_role != nil and perms == nil || perms < role_hierarchy[@min_role]
         client.api_send_text_message chat_type, sender, "@#{issuer}: You do not have permission to run this command (required: #{@min_role})"
         return false
       end
@@ -41,6 +44,33 @@ module SimpleXChat
         client.api_send_text_message chat_type, sender, "@#{issuer}: Incorrect number of arguments (required: #{@num_args})"
         return false
       end
+
+      # Verify per sender cooldown
+      # NOTE: This should be the last verification, because
+      #       it will update the last-validated-runs object
+      is_on_cooldown = true
+      remaining_cooldown = 0.0
+      chat = "#{chat_type}#{sender}"
+      @sender_last_run_lock.synchronize {
+        last_run = @sender_last_run[chat]
+        now = Time.now
+        if last_run != nil && @per_sender_cooldown_secs != nil
+          time_diff = now - last_run
+          if time_diff < @per_sender_cooldown_secs
+            remaining_cooldown = @per_sender_cooldown_secs - time_diff
+            break
+          end
+        end
+
+        @sender_last_run[chat] = now
+        is_on_cooldown = false
+      }
+
+      if is_on_cooldown
+        client.api_send_text_message chat_type, sender, "@#{issuer}: On cooldown, try again in #{remaining_cooldown.round(1)} seconds"
+        return false
+      end
+      
 
       return true
     end

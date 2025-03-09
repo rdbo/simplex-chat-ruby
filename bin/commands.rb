@@ -34,41 +34,10 @@ end
 
 class ShowcaseCommand < BasicCommand
   def initialize(cooldown_secs=30.0)
-    @sender_lock = Mutex.new
-    @sender_cooldown = {}
-    @cooldown_secs = cooldown_secs
-
-    super("showcase", "Send a showcase image of the SimpleX Chat Ruby API", num_args: 0)
+    super("showcase", "Send a showcase image of the SimpleX Chat Ruby API", num_args: 0, per_sender_cooldown_secs: 30.0)
   end
 
   def execute(client, chat_msg, args)
-    sender = chat_msg[:sender]
-    issuer = chat_msg[:contact]
-    chat_type = chat_msg[:chat_type]
-    chat = "#{chat_type}#{sender}"
-
-    cooldown_period_over = false
-    remaining_cooldown = 0.0
-    @sender_lock.synchronize {
-      last_run = @sender_cooldown[chat]
-      now = Time.now
-      if last_run != nil
-        time_diff = now - last_run
-        if time_diff < @cooldown_secs
-          remaining_cooldown = @cooldown_secs - time_diff
-          break
-        end
-      end
-
-      @sender_cooldown[chat] = now
-      cooldown_period_over = true
-    }
-
-    if not cooldown_period_over
-      client.api_send_text_message chat_type, sender, "@#{issuer}: On cooldown, try again in #{remaining_cooldown.round(1)} seconds"
-      return
-    end
-
     client.api_send_image chat_msg[:chat_type], chat_msg[:sender], "#{Dir.pwd}/showcase.png"
   end
 end
