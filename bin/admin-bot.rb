@@ -2,10 +2,12 @@
 
 require 'net/http'
 require 'logger'
+
 require_relative '../lib/simplex-chat'
-require_relative 'cmd-runner'
-require_relative 'commands'
+require_relative '../lib/simplex-chat/cmd-runner'
 include SimpleXChat
+
+require_relative 'commands'
 
 puts "Connecting client..."
 client = ClientAgent.new URI('ws://localhost:5225'), log_level: Logger::DEBUG
