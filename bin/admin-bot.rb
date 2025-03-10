@@ -10,7 +10,8 @@ include SimpleXChat
 require_relative 'commands'
 
 puts "Connecting client..."
-client = ClientAgent.new URI('ws://localhost:5225'), log_level: Logger::DEBUG
+SimpleXChat::Logging::logger log_level: Logger::DEBUG # Instantiate the logger with different params
+client = ClientAgent.new URI('ws://localhost:5225')
 
 puts "Sending commands..."
 version = client.api_version
@@ -40,7 +41,7 @@ contacts.each { |c| puts "  - #{c['name']} (#{c['id']}) -> #{c['mergedPreference
 puts "Groups:"
 groups.each { |g| puts "  - #{g['name']} (#{g['id']}) -> alias: #{g['memberName']}, role: #{g['memberRole']}, members: #{g['currentMembers']}" }
 puts "Last Messages:"
-last_messages.each{ |m| puts "  - #{m[:chat_type]}#{m[:sender]}: #{m[:msg_text]}" }
+last_messages.each{ |m| puts "  - #{m[:chat_type]}#{m[:sender]} [#{m[:contact]}]: #{m[:msg_text]}" }
 puts "Last Chats:"
 last_chats.each{ |c| puts "  - #{c[:chat_type]}#{c[:conversation]}" }
 puts "Commands:"

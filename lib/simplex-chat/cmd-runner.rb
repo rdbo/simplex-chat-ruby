@@ -91,6 +91,7 @@ module SimpleXChat
         { "#{prefix}#{cmd.name}" => cmd }
       }.reduce({}, &:merge)
       @prefix = prefix
+      @logger = Logging.logger
     end
 
     def listen(max_backlog_secs: 5.0)
@@ -98,7 +99,7 @@ module SimpleXChat
         begin
           break if process_next_event(max_backlog_secs) == :stop
         rescue SimpleXChat::GenericError => e
-          puts "[!] Caught error: #{e}"
+          @logger.error("[!] Caught error: #{e}")
         rescue => e
           raise e
         end
@@ -110,10 +111,10 @@ module SimpleXChat
     def process_next_event(max_backlog_secs)
       chat_msg = @client.next_chat_message(max_backlog_secs: max_backlog_secs)
       if chat_msg == nil
-        puts "Message queue is closed"
+        @logger.warn("Message queue is closed")
         return :stop
       end
-      puts "Chat message: #{chat_msg}"
+      @logger.debug("Chat message: #{chat_msg}")
 
       msg_text = chat_msg[:msg_text]
       chat_type = chat_msg[:chat_type]
@@ -139,7 +140,7 @@ module SimpleXChat
       args = message_items[1..]
 
       # Run command
-      puts "Validating and executing command '#{command.name}' for: #{chat_type}#{sender} [#{issuer}]: #{msg_text}"
+      @logger.debug("Validating and executing command '#{command.name}' for: #{chat_type}#{sender} [#{issuer}]: #{msg_text}")
       command.validate_and_execute @client, chat_msg, args
     end
   end

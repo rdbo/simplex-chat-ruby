@@ -4,6 +4,7 @@ require_relative 'simplex-chat/version'
 require_relative 'simplex-chat/errors'
 require_relative 'simplex-chat/patches'
 require_relative 'simplex-chat/types'
+require_relative 'simplex-chat/logger'
 
 module SimpleXChat
   require 'net/http'
@@ -14,7 +15,7 @@ module SimpleXChat
   require 'time'
 
   class ClientAgent
-    def initialize(client_uri, connect: true, log_level: Logger::INFO, timeout_ms: 10_000, interval_ms: 100)
+    def initialize(client_uri, connect: true, timeout_ms: 10_000, interval_ms: 100)
       @uri = client_uri
       @message_queue = Queue.new
       @chat_message_queue = Queue.new
@@ -28,12 +29,7 @@ module SimpleXChat
       @timeout_ms = timeout_ms
       @interval_ms = interval_ms
 
-      @logger = Logger.new($stderr)
-      @logger.level = log_level
-      @logger.progname = 'simplex-chat'
-      @logger.formatter = -> (severity, datetime, progname, msg) {
-        "| [#{severity}] | #{datetime} | (#{progname}) :: #{msg}\n"
-      }
+      @logger = Logging.logger
 
       self.connect if connect
 
