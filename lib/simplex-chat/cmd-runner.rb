@@ -84,7 +84,6 @@ module SimpleXChat
   end
 
   class BasicCommandRunner
-    # TODO: Consider using logger
     def initialize(client, commands, prefix)
       @client = client
       @commands = commands.map { |cmd|
