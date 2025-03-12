@@ -3,14 +3,19 @@ module SimpleXChat
     attr_reader :name, :num_args, :desc, :min_role
 
     # TODO: Allow optional arguments
-    def initialize(name, desc="", num_args: 0, min_role: GroupMemberRole::MEMBER, per_sender_cooldown_secs: nil)
+    def initialize(name, desc="", num_args: 0, min_role: GroupMemberRole::MEMBER,
+                   per_sender_cooldown_secs: nil, per_issuer_cooldown_secs: nil)
       @name = name
       @num_args = num_args
       @desc = desc
       @min_role = min_role
       @per_sender_cooldown_secs = per_sender_cooldown_secs
-      @sender_last_run = {}
-      @sender_last_run_lock = Mutex.new
+      @per_issuer_cooldown_secs = per_issuer_cooldown_secs
+      @last_runs = {
+        :per_sender => {},
+        :per_issuer => {}
+      }
+      @last_runs_lock = Mutex.new
     end
 
     def validate_and_execute(client, chat_msg, args)
@@ -51,18 +56,30 @@ module SimpleXChat
       is_on_cooldown = true
       remaining_cooldown = 0.0
       chat = "#{chat_type}#{sender}"
-      @sender_last_run_lock.synchronize {
-        last_run = @sender_last_run[chat]
+      chat_and_issuer = "#{chat_type}#{sender}[#{issuer}]"
+      @last_runs_lock.synchronize {
+        sender_last_run = @last_runs[:per_sender][chat]
+        issuer_last_run = @last_runs[:per_issuer][chat_and_issuer]
         now = Time.now
-        if last_run != nil && @per_sender_cooldown_secs != nil
-          time_diff = now - last_run
+        if sender_last_run != nil && @per_sender_cooldown_secs != nil
+          time_diff = now - sender_last_run
           if time_diff < @per_sender_cooldown_secs
             remaining_cooldown = @per_sender_cooldown_secs - time_diff
-            break
           end
         end
 
-        @sender_last_run[chat] = now
+        if issuer_last_run != nil && @per_issuer_cooldown_secs != nil
+          time_diff = now - issuer_last_run
+          if time_diff < @per_issuer_cooldown_secs
+            cooldown = @per_issuer_cooldown_secs - time_diff
+            remaining_cooldown = [cooldown, remaining_cooldown].max
+          end
+        end
+
+        break if remaining_cooldown > 0.0
+
+        @last_runs[:per_sender][chat] = now
+        @last_runs[:per_issuer][chat_and_issuer] = now
         is_on_cooldown = false
       }
 
