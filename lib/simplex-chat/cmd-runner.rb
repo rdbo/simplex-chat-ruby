@@ -145,15 +145,15 @@ module SimpleXChat
       # Skip automated group messages
       return if issuer == nil
 
-      # Verify if this is a registered command
+      # Verify if message is a command
       message_items = msg_text.split(" ")
       first_word = message_items[0]
+      return if not first_word.start_with?(@prefix)
 
       # React to all messages we will process
-      if first_word.start_with?(@prefix)
-        @client.api_reaction chat_msg[:chat_type], chat_msg[:sender_id], chat_msg[:msg_item_id], emoji: '🚀'
-      end
+      @client.api_reaction chat_msg[:chat_type], chat_msg[:sender_id], chat_msg[:msg_item_id], emoji: '🚀'
 
+      # Verify if this is a registered command
       command = @commands[first_word]
       if command == nil
         @client.api_send_text_message chat_msg[:chat_type], chat_msg[:sender], "@#{issuer}: Unknown command"
