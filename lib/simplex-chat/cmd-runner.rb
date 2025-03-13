@@ -20,7 +20,11 @@ module SimpleXChat
 
     def validate_and_execute(client, chat_msg, args)
       return if not validate(client, chat_msg, args)
-      execute client, chat_msg, args
+      begin
+        execute client, chat_msg, args
+      rescue
+        client.api_send_text_message chat_msg[:chat_type], chat_msg[:sender], "@#{chat_msg[:contact]}: Failed to execute command"
+      end
     end
 
     private
@@ -137,6 +141,9 @@ module SimpleXChat
       issuer = chat_msg[:contact]
       issuer_role = chat_msg[:contact_role]
       sender = chat_msg[:sender]
+
+      # Skip automated group messages
+      return if issuer == nil
 
       # Verify if this is a registered command
       message_items = msg_text.split(" ")
