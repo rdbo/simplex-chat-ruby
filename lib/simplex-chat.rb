@@ -4,7 +4,7 @@ require_relative 'simplex-chat/version'
 require_relative 'simplex-chat/errors'
 require_relative 'simplex-chat/patches'
 require_relative 'simplex-chat/types'
-require_relative 'simplex-chat/logger'
+require_relative 'simplex-chat/logging'
 
 module SimpleXChat
   require 'net/http'
