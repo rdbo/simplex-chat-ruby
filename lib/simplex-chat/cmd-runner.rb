@@ -142,8 +142,8 @@ module SimpleXChat
       issuer_role = chat_msg[:contact_role]
       sender = chat_msg[:sender]
 
-      # Skip automated group messages
-      return if issuer == nil
+      # Skip automated group messages and empty messages
+      return if issuer == nil or msg_text.length == 0
 
       # Verify if message is a command
       message_items = msg_text.split(" ")
